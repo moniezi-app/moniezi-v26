@@ -1,0 +1,5 @@
+MONIEZI v26 package
+- Repackaged from the v25.3.1 Tax Summary PDF fix for the new GitHub v26 repo
+- Tax Summary PDF export fix retained (OTF font subsetting disabled in pdf-lib/fontkit)
+- Service worker cache version bumped for clean deployment pickup
+- Slim source-only package

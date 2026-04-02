@@ -1,0 +1,57 @@
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Universal box-sizing (prevents padding from causing overflow) */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Base styles */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* iOS safe-area fallback for older WebKit (constant() was the pre-standard name) */
+@supports (padding-top: constant(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: max(16px, constant(safe-area-inset-top));
+  }
+  .safe-area-bottom {
+    padding-bottom: max(16px, constant(safe-area-inset-bottom));
+  }
+}
+
+/* Lock body scroll while modal/drawer is open (iOS needs position:fixed) */
+body.modal-open {
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
+  /* Preserve current scroll position (set via JS) */
+  top: var(--scroll-top, 0px);
+}
+
+/* Modal/drawer overlays: prevent horizontal drift on iOS */
+.modal-overlay {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollable content inside modals */
+.modal-scroll-area {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
