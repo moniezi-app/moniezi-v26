@@ -228,6 +228,33 @@ const downloadBlob = (blob: Blob, filename: string) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+const savePdfBlobToDevice = async (blob: Blob, filename: string, shareText: string) => {
+  const navAny = (typeof navigator !== 'undefined' ? navigator : null) as any;
+
+  try {
+    if (typeof File !== 'undefined' && navAny?.share) {
+      const file = new File([blob], filename, { type: blob.type || 'application/pdf' });
+      const canShareFiles = !navAny.canShare || navAny.canShare({ files: [file] });
+
+      if (canShareFiles) {
+        await navAny.share({
+          files: [file],
+          title: filename,
+          text: shareText,
+        });
+        return 'shared' as const;
+      }
+    }
+  } catch (error) {
+    if ((error as any)?.name !== 'AbortError') {
+      console.warn('PDF share failed, falling back to download.', error);
+    }
+  }
+
+  downloadBlob(blob, filename);
+  return 'downloaded' as const;
+};
+
 const escapeCsv = (value: any) => {
   const s = String(value ?? '');
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -4485,7 +4512,7 @@ const demoMileageTrips: MileageTrip[] = [
     try {
       const pdfBytes = await generateTaxSummaryPdfBytes(pdfData);
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      downloadBlob(blob, filename);
+      await savePdfBlobToDevice(blob, filename, `Tax Summary PDF for ${taxPrepYear}`);
       showToast(`Exported Tax Summary PDF for ${taxPrepYear}`, 'success');
     } catch (e) {
       console.error('Tax summary PDF export failed:', {
