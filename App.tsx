@@ -4483,13 +4483,17 @@ const demoMileageTrips: MileageTrip[] = [
     };
 
     try {
-      await waitForMonieziFonts();
       const pdfBytes = await generateTaxSummaryPdfBytes(pdfData);
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       downloadBlob(blob, filename);
       showToast(`Exported Tax Summary PDF for ${taxPrepYear}`, 'success');
     } catch (e) {
-      console.error('Tax summary PDF export failed:', e);
+      console.error('Tax summary PDF export failed:', {
+        name: (e as any)?.name,
+        message: (e as any)?.message,
+        stack: (e as any)?.stack,
+        error: e,
+      });
       showToast('Failed to export Tax Summary PDF.', 'error');
     }
   };

@@ -3,3 +3,5 @@ MONIEZI v26 package
 - Tax Summary PDF export fix retained (OTF font subsetting disabled in pdf-lib/fontkit)
 - Service worker cache version bumped for clean deployment pickup
 - Slim source-only package
+
+Updated: v26.0.1 tax summary PDF export now falls back to built-in PDF fonts if branded font assets fail inside installed mobile PWAs.
