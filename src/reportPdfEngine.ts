@@ -58,6 +58,12 @@ const pageWidth = 595.28;
 const pageHeight = 841.89;
 const margin = 40;
 const contentWidth = pageWidth - margin * 2;
+const SECTION_HEADER_HEIGHT = 74;
+const SECTION_BODY_TOP_PAD = 14;
+const SECTION_BODY_BOTTOM_PAD = 14;
+const KEY_VALUE_ROW_HEIGHT = 44;
+const PROGRESS_ROW_HEIGHT = 50;
+const TABLE_HEADER_HEIGHT = 28;
 
 const COLORS = {
   text: rgb(0.07, 0.11, 0.2),
@@ -74,14 +80,13 @@ const COLORS = {
   yellow: rgb(0.92, 0.64, 0.14),
 };
 
-
 const sanitizePdfText = (value: unknown) => String(value ?? '')
   .normalize('NFKD')
-  .replace(/[‐‑‒–—―]/g, '-')
-  .replace(/[•·]/g, '-')
-  .replace(/[“”]/g, '"')
-  .replace(/[‘’]/g, "'")
-  .replace(/…/g, '...')
+  .replace(/[â€â€‘â€’â€“â€”â€•]/g, '-')
+  .replace(/[â€¢Â·]/g, '-')
+  .replace(/[â€œâ€]/g, '"')
+  .replace(/[â€˜â€™]/g, "'")
+  .replace(/â€¦/g, '...')
   .replace(/\u00A0/g, ' ')
   .replace(/[^\x20-\x7E\n]/g, '');
 
@@ -94,6 +99,7 @@ const splitWords = (text: string, font: PDFFont, size: number, maxWidth: number)
   const safeText = sanitizePdfText(text);
   const words = safeText.split(/\s+/).filter(Boolean);
   if (!words.length) return [''];
+
   let current = words[0];
   for (let i = 1; i < words.length; i += 1) {
     const candidate = `${current} ${words[i]}`;
@@ -104,9 +110,19 @@ const splitWords = (text: string, font: PDFFont, size: number, maxWidth: number)
       current = words[i];
     }
   }
+
   lines.push(current);
   return lines;
 };
+
+const measureTextBlockHeight = (text: string, font: PDFFont, size: number, width: number, lineGap = 4) => {
+  const lines = splitWords(text, font, size, width);
+  if (!lines.length) return 0;
+  return lines.length * size + Math.max(0, lines.length - 1) * lineGap;
+};
+
+const getSectionHeight = (contentHeight: number) => SECTION_HEADER_HEIGHT + SECTION_BODY_TOP_PAD + contentHeight + SECTION_BODY_BOTTOM_PAD;
+const getTableHeight = (rowCount: number, rowHeight: number) => TABLE_HEADER_HEIGHT + rowCount * rowHeight;
 
 const drawTextBlock = (page: PDFPage, text: string, x: number, yTop: number, width: number, font: PDFFont, size: number, color = COLORS.textSoft, lineGap = 4) => {
   const lines = splitWords(text, font, size, width);
@@ -132,47 +148,46 @@ const drawLabelValueCard = (
   boldFont: PDFFont,
 ) => {
   page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
-  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 16, y: yTop - 30, size: 8.8, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.6 });
-  page.drawText(sanitizePdfText(value), { x: x + 16, y: yTop - 66, size: 22, font: boldFont, color: COLORS.text });
-  drawTextBlock(page, note, x + 16, yTop - 86, width - 32, bodyFont, 7.5, COLORS.textSoft, 2.5);
+  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 14, y: yTop - 24, size: 8.4, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.5 });
+  page.drawText(sanitizePdfText(value), { x: x + 14, y: yTop - 50, size: 18, font: boldFont, color: COLORS.text });
+  drawTextBlock(page, note, x + 14, yTop - 66, width - 28, bodyFont, 7.1, COLORS.textSoft, 2.2);
 };
 
 const drawMetaCard = (page: PDFPage, x: number, yTop: number, width: number, height: number, label: string, value: string, bodyFont: PDFFont, boldFont: PDFFont) => {
   page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.blueTint });
-  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 14, y: yTop - 22, size: 7.8, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.8 });
-  const lines = splitWords(value, boldFont, 11, width - 28);
-  let lineY = yTop - 52;
+  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 12, y: yTop - 18, size: 7.2, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.6 });
+  const lines = splitWords(value, boldFont, 9.8, width - 24);
+  let lineY = yTop - 34;
   lines.forEach(line => {
-    page.drawText(sanitizePdfText(line), { x: x + 14, y: lineY, size: 11, font: boldFont, color: COLORS.text });
-    lineY -= 15;
+    page.drawText(sanitizePdfText(line), { x: x + 12, y: lineY, size: 9.8, font: boldFont, color: COLORS.text });
+    lineY -= 12;
   });
 };
 
 const drawSectionShell = (page: PDFPage, x: number, yTop: number, width: number, height: number, sectionNo: string, title: string, subtitle: string, bodyFont: PDFFont, boldFont: PDFFont) => {
   page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
-  page.drawRectangle({ x, y: yTop - 86, width, height: 86, color: COLORS.panel, borderColor: COLORS.panelBorder, borderWidth: 0 });
-  page.drawText(sanitizePdfText(`SECTION ${sectionNo}`), { x: x + 18, y: yTop - 28, size: 8.8, font: boldFont, color: COLORS.blue, characterSpacing: 1.6 });
-  page.drawText(sanitizePdfText(title), { x: x + 18, y: yTop - 58, size: 15, font: boldFont, color: COLORS.text });
-  page.drawText(sanitizePdfText(subtitle), { x: x + 18, y: yTop - 76, size: 7.7, font: bodyFont, color: COLORS.textSoft });
-  page.drawLine({ start: { x, y: yTop - 86 }, end: { x: x + width, y: yTop - 86 }, thickness: 1, color: COLORS.line });
-  return yTop - 86;
+  page.drawRectangle({ x, y: yTop - SECTION_HEADER_HEIGHT, width, height: SECTION_HEADER_HEIGHT, color: COLORS.panel });
+  page.drawText(sanitizePdfText(`SECTION ${sectionNo}`), { x: x + 18, y: yTop - 22, size: 8.2, font: boldFont, color: COLORS.blue, characterSpacing: 1.6 });
+  page.drawText(sanitizePdfText(title), { x: x + 18, y: yTop - 44, size: 14, font: boldFont, color: COLORS.text });
+  page.drawText(sanitizePdfText(subtitle), { x: x + 18, y: yTop - 60, size: 7.3, font: bodyFont, color: COLORS.textSoft });
+  page.drawLine({ start: { x, y: yTop - SECTION_HEADER_HEIGHT }, end: { x: x + width, y: yTop - SECTION_HEADER_HEIGHT }, thickness: 1, color: COLORS.line });
+  return yTop - SECTION_HEADER_HEIGHT - SECTION_BODY_TOP_PAD;
 };
 
 const drawKeyValueRows = (page: PDFPage, x: number, yTop: number, width: number, rows: Array<{ key: string; note: string; value: string; emphasize?: boolean }>, bodyFont: PDFFont, boldFont: PDFFont) => {
-  const rowHeight = 46;
   rows.forEach((row, idx) => {
-    const rowTop = yTop - idx * rowHeight;
+    const rowTop = yTop - idx * KEY_VALUE_ROW_HEIGHT;
     if (idx > 0) {
       page.drawLine({ start: { x, y: rowTop }, end: { x: x + width, y: rowTop }, thickness: 1, color: COLORS.line });
     }
     if (row.emphasize) {
-      page.drawRectangle({ x, y: rowTop - rowHeight, width, height: rowHeight, color: COLORS.blueTint });
+      page.drawRectangle({ x, y: rowTop - KEY_VALUE_ROW_HEIGHT, width, height: KEY_VALUE_ROW_HEIGHT, color: COLORS.blueTint });
     }
-    page.drawText(sanitizePdfText(row.key), { x: x + 14, y: rowTop - 20, size: 8.6, font: boldFont, color: COLORS.text });
-    page.drawText(sanitizePdfText(row.note), { x: x + 14, y: rowTop - 34, size: 7.2, font: row.emphasize ? boldFont : bodyFont, color: COLORS.textSoft });
+    page.drawText(sanitizePdfText(row.key), { x: x + 14, y: rowTop - 19, size: 8.6, font: boldFont, color: COLORS.text });
+    page.drawText(sanitizePdfText(row.note), { x: x + 14, y: rowTop - 33, size: 7.1, font: row.emphasize ? boldFont : bodyFont, color: COLORS.textSoft });
     const safeValue = sanitizePdfText(row.value);
-    const valueWidth = boldFont.widthOfTextAtSize(safeValue, 9.4);
-    page.drawText(safeValue, { x: x + width - 14 - valueWidth, y: rowTop - 20, size: 9.4, font: boldFont, color: COLORS.text });
+    const valueWidth = boldFont.widthOfTextAtSize(safeValue, 9.2);
+    page.drawText(safeValue, { x: x + width - 14 - valueWidth, y: rowTop - 19, size: 9.2, font: boldFont, color: COLORS.text });
   });
 };
 
@@ -185,21 +200,21 @@ const progressTone = (value: number) => {
 
 const drawProgressRow = (page: PDFPage, x: number, yTop: number, width: number, label: string, detail: string, value: number, bodyFont: PDFFont, boldFont: PDFFont) => {
   const tone = progressTone(value);
-  page.drawText(sanitizePdfText(label), { x, y: yTop - 16, size: 8.4, font: boldFont, color: COLORS.text });
-  page.drawText(sanitizePdfText(detail), { x, y: yTop - 30, size: 7.2, font: bodyFont, color: COLORS.textSoft });
-  page.drawRectangle({ x: x + width - 48, y: yTop - 24, width: 48, height: 20, color: tone.pill });
+  page.drawText(sanitizePdfText(label), { x, y: yTop - 14, size: 8.3, font: boldFont, color: COLORS.text });
+  page.drawText(sanitizePdfText(detail), { x, y: yTop - 28, size: 7.1, font: bodyFont, color: COLORS.textSoft });
+  page.drawRectangle({ x: x + width - 48, y: yTop - 22, width: 48, height: 18, color: tone.pill });
   const pct = formatPercent(value);
-  const pctWidth = boldFont.widthOfTextAtSize(sanitizePdfText(pct), 8.2);
-  page.drawText(sanitizePdfText(pct), { x: x + width - 24 - pctWidth / 2, y: yTop - 17, size: 8.2, font: boldFont, color: tone.text });
-  page.drawRectangle({ x, y: yTop - 46, width, height: 8, color: tone.track });
-  page.drawRectangle({ x, y: yTop - 46, width: Math.max(24, width * Math.max(0, Math.min(1, value / 100))), height: 8, color: tone.bar });
+  const pctWidth = boldFont.widthOfTextAtSize(sanitizePdfText(pct), 8.1);
+  page.drawText(sanitizePdfText(pct), { x: x + width - 24 - pctWidth / 2, y: yTop - 15, size: 8.1, font: boldFont, color: tone.text });
+  page.drawRectangle({ x, y: yTop - 42, width, height: 7, color: tone.track });
+  page.drawRectangle({ x, y: yTop - 42, width: Math.max(24, width * Math.max(0, Math.min(1, value / 100))), height: 7, color: tone.bar });
 };
 
 const drawMiniStat = (page: PDFPage, x: number, yTop: number, width: number, height: number, label: string, value: string, note: string, bodyFont: PDFFont, boldFont: PDFFont) => {
-  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1,1,1) });
-  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 16, y: yTop - 24, size: 8.2, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.5 });
-  page.drawText(sanitizePdfText(value), { x: x + 16, y: yTop - 58, size: 20, font: boldFont, color: COLORS.text });
-  drawTextBlock(page, note, x + 16, yTop - 76, width - 32, bodyFont, 7.1, COLORS.textSoft, 2.2);
+  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
+  page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 14, y: yTop - 20, size: 7.5, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.4 });
+  page.drawText(sanitizePdfText(value), { x: x + 14, y: yTop - 42, size: 16, font: boldFont, color: COLORS.text });
+  drawTextBlock(page, note, x + 14, yTop - 56, width - 28, bodyFont, 6.8, COLORS.textSoft, 2);
 };
 
 const drawTable = (
@@ -211,35 +226,40 @@ const drawTable = (
   rows: string[][],
   bodyFont: PDFFont,
   boldFont: PDFFont,
-  options?: { headerFontSize?: number; bodyFontSize?: number; rowHeight?: number; emptyStateItalic?: boolean },
+  options?: { headerFontSize?: number; bodyFontSize?: number; rowHeight?: number },
 ) => {
-  const headerHeight = 28;
   const rowHeight = options?.rowHeight ?? 34;
   const bodySize = options?.bodyFontSize ?? 8.6;
   const headerSize = options?.headerFontSize ?? 8.6;
-  page.drawRectangle({ x, y: yTop - headerHeight, width, height: headerHeight, color: COLORS.panel });
+
+  page.drawRectangle({ x, y: yTop - TABLE_HEADER_HEIGHT, width, height: TABLE_HEADER_HEIGHT, color: COLORS.panel });
+
   let colX = x;
   columns.forEach((col, idx) => {
     const headerLabel = sanitizePdfText(col.label);
     const textWidth = boldFont.widthOfTextAtSize(headerLabel, headerSize);
     const textX = col.align === 'right' ? colX + col.width - 12 - textWidth : colX + 12;
-    page.drawText(headerLabel, { x: textX, y: yTop - 18, size: headerSize, font: boldFont, color: COLORS.textSoft, characterSpacing: idx === 0 ? 0.8 : 1.2 });
+    page.drawText(headerLabel, { x: textX, y: yTop - 18, size: headerSize, font: boldFont, color: COLORS.textSoft, characterSpacing: idx === 0 ? 0.8 : 1.1 });
     colX += col.width;
   });
-  page.drawLine({ start: { x, y: yTop - headerHeight }, end: { x: x + width, y: yTop - headerHeight }, thickness: 1, color: COLORS.line });
+
+  page.drawLine({ start: { x, y: yTop - TABLE_HEADER_HEIGHT }, end: { x: x + width, y: yTop - TABLE_HEADER_HEIGHT }, thickness: 1, color: COLORS.line });
+
   rows.forEach((row, rowIndex) => {
-    const top = yTop - headerHeight - rowIndex * rowHeight;
-    if (rowIndex > 0) page.drawLine({ start: { x, y: top }, end: { x: x + width, y: top }, thickness: 1, color: COLORS.line });
+    const top = yTop - TABLE_HEADER_HEIGHT - rowIndex * rowHeight;
+    if (rowIndex > 0) {
+      page.drawLine({ start: { x, y: top }, end: { x: x + width, y: top }, thickness: 1, color: COLORS.line });
+    }
+
     let cellX = x;
     row.forEach((cell, idx) => {
       const align = columns[idx]?.align ?? 'left';
-      const font = options?.emptyStateItalic && row.length === 1 ? bodyFont : bodyFont;
+      const safeCell = sanitizePdfText(cell);
       if (align === 'right') {
-        const safeCell = sanitizePdfText(cell);
         const cellWidth = bodyFont.widthOfTextAtSize(safeCell, bodySize);
-        page.drawText(safeCell, { x: cellX + columns[idx].width - 12 - cellWidth, y: top - 22, size: bodySize, font, color: COLORS.text });
+        page.drawText(safeCell, { x: cellX + columns[idx].width - 12 - cellWidth, y: top - 18, size: bodySize, font: bodyFont, color: COLORS.text });
       } else {
-        page.drawText(sanitizePdfText(cell), { x: cellX + 12, y: top - 22, size: bodySize, font, color: COLORS.text });
+        page.drawText(safeCell, { x: cellX + 12, y: top - 18, size: bodySize, font: bodyFont, color: COLORS.text });
       }
       cellX += columns[idx].width;
     });
@@ -260,9 +280,6 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
       getEmbeddedReportBoldOtf(),
       getEmbeddedAppRegularOtf(),
     ]);
-    // Keep the branded fonts when they load successfully.
-    // Some installed mobile PWAs can fail to fetch/embed these assets reliably,
-    // so we fall back to PDF standard fonts instead of aborting export.
     bodyFont = await pdfDoc.embedFont(reportRegularOtf, { subset: false });
     boldFont = await pdfDoc.embedFont(reportBoldOtf, { subset: false });
     kickerFont = await pdfDoc.embedFont(appRegularOtf, { subset: false });
@@ -285,10 +302,33 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     { label: 'Ledger Transactions', value: formatNumber(data.ledgerTransactions), note: 'Income and expense entries included in this year-end package.' },
     { label: 'Linked Receipts', value: formatNumber(data.linkedReceipts), note: 'Receipt-backed expenses currently attached inside MONIEZI.' },
     { label: 'Expense Categories', value: formatNumber(data.expenseCategoriesCount), note: 'Distinct deduction buckets used in this tax year.' },
-    { label: 'Top Expense Category', value: data.topExpenseCategoryName || '—', note: data.topExpenseCategoryName ? `${formatCurrency(data.currencySymbol, data.topExpenseCategoryAmount)} · ${formatPercent(data.topExpenseCategorySharePct)} of expenses` : 'No expense activity recorded for this period.' },
+    { label: 'Top Expense Category', value: data.topExpenseCategoryName || 'â€”', note: data.topExpenseCategoryName ? `${formatCurrency(data.currencySymbol, data.topExpenseCategoryAmount)} Â· ${formatPercent(data.topExpenseCategorySharePct)} of expenses` : 'No expense activity recorded for this period.' },
   ];
+  const section1Rows = [
+    { key: 'Gross Business Income', note: 'Total recorded income transactions for the selected tax year.', value: formatCurrency(data.currencySymbol, data.totalIncome) },
+    { key: 'Deductible Business Expenses', note: 'Total expense entries tracked in MONIEZI before any external adjustments.', value: formatCurrency(data.currencySymbol, data.totalExpenses) },
+    { key: 'Net Business Profit', note: 'Income less recorded expenses for the selected period.', value: formatCurrency(data.currencySymbol, data.netProfit), emphasize: true },
+    { key: 'Business Mileage Logged', note: `${formatNumber(data.completeMileageCount)} complete trip ${data.completeMileageCount === 1 ? 'entry' : 'entries'} captured in the mileage log.`, value: `${formatNumber(data.totalMiles, 1)} mi` },
+    { key: 'Standard Mileage Rate Used', note: 'Configured inside MONIEZI settings for the selected export.', value: `${data.currencySymbol}${formatNumber(data.mileageRate, 2)} / mi` },
+    { key: 'Estimated Mileage Deduction', note: 'Computed from logged business miles using the configured rate.', value: formatCurrency(data.currencySymbol, data.mileageDeduction) },
+    { key: 'Reporting Period', note: 'Earliest to latest record included in this export package.', value: data.reportingPeriodLabel },
+  ];
+  const progressRows = [
+    { label: 'Receipt Coverage', detail: `${formatNumber(data.linkedReceipts)} linked receipts across ${formatNumber(data.expenseItemsCount)} deductible expense items.`, value: data.receiptCoveragePct },
+    { label: 'Expense Review Status', detail: `${formatNumber(data.reviewedExpenseCount)} reviewed Â· ${formatNumber(data.pendingReviewCount)} pending review.`, value: data.reviewCoveragePct },
+    { label: 'Mileage Log Completeness', detail: `${formatNumber(data.completeMileageCount)} complete trip entries recorded for ${formatNumber(data.totalMiles, 1)} business miles.`, value: data.mileageCompletionPct },
+  ];
+  const expenseTableRows = data.expenseRows.length
+    ? data.expenseRows.map(row => [row.name, formatCurrency(data.currencySymbol, row.amount), formatPercent(row.sharePct), `${row.linked}/${row.count}`])
+    : [['No deductible expenses were recorded for this tax year.', '', '', '']];
+  const mileageTableRows = data.quarterlyMileage.map(row => [row.quarter, formatNumber(row.trips), formatNumber(row.miles, 1), formatCurrency(data.currencySymbol, row.deduction)]);
+  const expenseRowHeight = 30;
+  const mileageRowHeight = 28;
+  const splitGap = 16;
+  const splitWidth = (contentWidth - splitGap) / 2;
+  const attentionLineGroups = data.attentionItems.slice(0, 4).map(item => splitWords(item, bodyFont, 9.2, splitWidth - 48));
+  const closingNoteText = 'MONIEZI organized this package from your recorded ledger entries, linked receipt attachments, and mileage logs for the selected tax year. The totals here are designed to make the value of your records immediately clear: what you earned, what you spent, how well expenses are documented, and what should be addressed before filing. Final tax treatment, classification decisions, and any required adjustments should still be reviewed with your tax professional.';
 
-  // Page 1
   page1.drawText(sanitizePdfText('MONIEZI PRO FINANCE'), { x: margin, y: pageHeight - margin + 4, size: 11, font: kickerFont, color: COLORS.blue, characterSpacing: 2.1 });
   page1.drawText(sanitizePdfText('MONIEZI'), { x: margin, y: pageHeight - 92, size: 40, font: boldFont, color: COLORS.text });
   page1.drawText(sanitizePdfText(`Tax Prep Package Summary ${data.taxYear}`), { x: margin, y: pageHeight - 126, size: 22, font: boldFont, color: COLORS.text });
@@ -301,7 +341,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
 
   const cardGap = 12;
   const cardWidth = (contentWidth - cardGap * 3) / 4;
-  const cardHeight = 95;
+  const cardHeight = 92;
   const cardsTop = pageHeight - 208;
   summaryCards.forEach((card, idx) => {
     const col = idx % 4;
@@ -309,92 +349,89 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     drawLabelValueCard(page1, margin + col * (cardWidth + cardGap), cardsTop - row * (cardHeight + cardGap), cardWidth, cardHeight, card.label, card.value, card.note, bodyFont, boldFont);
   });
 
-  const section1Top = pageHeight - 422;
-  drawSectionShell(page1, margin, section1Top, contentWidth, 408, '1', 'Tax-Ready Financial Snapshot', 'Core totals your accountant typically needs first, presented in one clean year-end view.', bodyFont, boldFont);
-  drawKeyValueRows(page1, margin, section1Top - 86, contentWidth, [
-    { key: 'Gross Business Income', note: 'Total recorded income transactions for the selected tax year.', value: formatCurrency(data.currencySymbol, data.totalIncome) },
-    { key: 'Deductible Business Expenses', note: 'Total expense entries tracked in MONIEZI before any external adjustments.', value: formatCurrency(data.currencySymbol, data.totalExpenses) },
-    { key: 'Net Business Profit', note: 'Income less recorded expenses for the selected period.', value: formatCurrency(data.currencySymbol, data.netProfit), emphasize: true },
-    { key: 'Business Mileage Logged', note: `${formatNumber(data.completeMileageCount)} complete trip ${data.completeMileageCount === 1 ? 'entry' : 'entries'} captured in the mileage log.`, value: `${formatNumber(data.totalMiles, 1)} mi` },
-    { key: 'Standard Mileage Rate Used', note: 'Configured inside MONIEZI settings for the selected export.', value: `${data.currencySymbol}${formatNumber(data.mileageRate, 2)} / mi` },
-    { key: 'Estimated Mileage Deduction', note: 'Computed from logged business miles using the configured rate.', value: formatCurrency(data.currencySymbol, data.mileageDeduction) },
-    { key: 'Reporting Period', note: 'Earliest to latest record included in this export package.', value: data.reportingPeriodLabel },
-  ], bodyFont, boldFont);
+  const cardsBottom = cardsTop - (cardHeight * 2) - cardGap;
+  const section1Height = getSectionHeight(section1Rows.length * KEY_VALUE_ROW_HEIGHT);
+  const section1Top = cardsBottom - 16;
+  const section1BodyTop = drawSectionShell(page1, margin, section1Top, contentWidth, section1Height, '1', 'Tax-Ready Financial Snapshot', 'Core totals your accountant typically needs first, presented in one clean year-end view.', bodyFont, boldFont);
+  drawKeyValueRows(page1, margin, section1BodyTop, contentWidth, section1Rows, bodyFont, boldFont);
 
-  // Page 2
   page2.drawText(sanitizePdfText('MONIEZI TAX PREP PACKAGE'), { x: margin, y: pageHeight - margin + 4, size: 11, font: kickerFont, color: COLORS.blue, characterSpacing: 2.1 });
   page2.drawText(sanitizePdfText('Documentation Status & Expense Breakdown'), { x: margin, y: pageHeight - 92, size: 25, font: boldFont, color: COLORS.text });
   drawTextBlock(page2, 'A fixed summary page showing record completeness plus the highest-impact deduction categories for the year.', margin, pageHeight - 124, 340, bodyFont, 8.8, COLORS.textSoft, 4);
   drawMetaCard(page2, 458, pageHeight - 22, 97, 44, 'Tax Year', data.taxYear, bodyFont, boldFont);
   drawMetaCard(page2, 436, pageHeight - 78, 119, 44, 'Expense Categories', formatNumber(data.expenseCategoriesCount), bodyFont, boldFont);
 
+  const section2MiniHeight = 72;
+  const section2ContentHeight = progressRows.length * PROGRESS_ROW_HEIGHT + (progressRows.length - 1) * 10 + 16 + section2MiniHeight;
+  const section2Height = getSectionHeight(section2ContentHeight);
   const section2Top = pageHeight - 150;
-  drawSectionShell(page2, margin, section2Top, contentWidth, 310, '2', 'Audit Readiness & Documentation Status', 'A quick view of how complete and organized your records look before filing.', bodyFont, boldFont);
-  const progressBaseY = section2Top - 104;
-  drawProgressRow(page2, margin + 18, progressBaseY, contentWidth - 36, 'Receipt Coverage', `${formatNumber(data.linkedReceipts)} linked receipts across ${formatNumber(data.expenseItemsCount)} deductible expense items.`, data.receiptCoveragePct, bodyFont, boldFont);
-  drawProgressRow(page2, margin + 18, progressBaseY - 74, contentWidth - 36, 'Expense Review Status', `${formatNumber(data.reviewedExpenseCount)} reviewed · ${formatNumber(data.pendingReviewCount)} pending review.`, data.reviewCoveragePct, bodyFont, boldFont);
-  drawProgressRow(page2, margin + 18, progressBaseY - 148, contentWidth - 36, 'Mileage Log Completeness', `${formatNumber(data.completeMileageCount)} complete trip entries recorded for ${formatNumber(data.totalMiles, 1)} business miles.`, data.mileageCompletionPct, bodyFont, boldFont);
-  const miniTop = section2Top - 222;
+  const section2BodyTop = drawSectionShell(page2, margin, section2Top, contentWidth, section2Height, '2', 'Audit Readiness & Documentation Status', 'A quick view of how complete and organized your records look before filing.', bodyFont, boldFont);
+  let progressY = section2BodyTop;
+  progressRows.forEach((row, idx) => {
+    drawProgressRow(page2, margin + 18, progressY, contentWidth - 36, row.label, row.detail, row.value, bodyFont, boldFont);
+    progressY -= PROGRESS_ROW_HEIGHT;
+    if (idx < progressRows.length - 1) progressY -= 10;
+  });
+
+  const miniTop = progressY - 10;
   const miniGap = 14;
   const miniWidth = (contentWidth - miniGap * 2 - 36) / 3;
-  drawMiniStat(page2, margin + 18, miniTop, miniWidth, 88, 'Package Coverage', formatNumber(data.ledgerTransactions), 'Total ledger transactions included in this tax-prep package export.', bodyFont, boldFont);
-  drawMiniStat(page2, margin + 18 + miniWidth + miniGap, miniTop, miniWidth, 88, 'Items Requiring Attention', formatNumber(data.itemsRequiringAttention), 'Headline open items across receipts, review status, categorization, and mileage completeness.', bodyFont, boldFont);
-  drawMiniStat(page2, margin + 18 + (miniWidth + miniGap) * 2, miniTop, miniWidth, 88, 'Prepared Privately', '100%', 'Generated directly from your MONIEZI records for local export and review.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18, miniTop, miniWidth, section2MiniHeight, 'Package Coverage', formatNumber(data.ledgerTransactions), 'Total ledger transactions included in this tax-prep package export.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18 + miniWidth + miniGap, miniTop, miniWidth, section2MiniHeight, 'Items Requiring Attention', formatNumber(data.itemsRequiringAttention), 'Headline open items across receipts, review status, categorization, and mileage completeness.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18 + (miniWidth + miniGap) * 2, miniTop, miniWidth, section2MiniHeight, 'Prepared Privately', '100%', 'Generated directly from your MONIEZI records for local export and review.', bodyFont, boldFont);
 
-  const section3Top = pageHeight - 438;
-  drawSectionShell(page2, margin, section3Top, contentWidth, 368, '3', 'Deductible Expense Breakdown', 'Top expense categories by dollar amount, including category share and receipt-backed count.', bodyFont, boldFont);
-  drawTable(page2, margin, section3Top - 86, contentWidth, [
+  const section3Height = getSectionHeight(getTableHeight(expenseTableRows.length, expenseRowHeight));
+  const section3Top = section2Top - section2Height - 18;
+  const section3BodyTop = drawSectionShell(page2, margin, section3Top, contentWidth, section3Height, '3', 'Deductible Expense Breakdown', 'Top expense categories by dollar amount, including category share and receipt-backed count.', bodyFont, boldFont);
+  drawTable(page2, margin, section3BodyTop, contentWidth, [
     { label: 'Expense Category', width: 235 },
     { label: 'Amount', width: 120, align: 'right' },
     { label: 'Share', width: 80, align: 'right' },
     { label: 'Receipts', width: 80, align: 'right' },
-  ],
-  data.expenseRows.length
-    ? data.expenseRows.map(row => [row.name, formatCurrency(data.currencySymbol, row.amount), formatPercent(row.sharePct), `${row.linked}/${row.count}`])
-    : [['No deductible expenses were recorded for this tax year.', '', '', '']],
-  bodyFont, boldFont, { rowHeight: 36, bodyFontSize: 8.8, headerFontSize: 8.4 });
+  ], expenseTableRows, bodyFont, boldFont, { rowHeight: expenseRowHeight, bodyFontSize: 8.4, headerFontSize: 8 });
 
-  // Page 3
   page3.drawText(sanitizePdfText('MONIEZI TAX PREP PACKAGE'), { x: margin, y: pageHeight - margin + 4, size: 11, font: kickerFont, color: COLORS.blue, characterSpacing: 2.1 });
   page3.drawText(sanitizePdfText('Mileage & Filing Checks'), { x: margin, y: pageHeight - 92, size: 25, font: boldFont, color: COLORS.text });
   drawTextBlock(page3, 'A compact closing page focused on quarter-level mileage totals, filing cleanup items, and final handoff guidance.', margin, pageHeight - 124, 360, bodyFont, 8.8, COLORS.textSoft, 4);
   drawMetaCard(page3, 370, pageHeight - 34, 185, 52, 'Reporting Period', data.reportingPeriodLabel, bodyFont, boldFont);
 
-  const splitGap = 16;
-  const splitWidth = (contentWidth - splitGap) / 2;
+  const section4Height = getSectionHeight(getTableHeight(mileageTableRows.length, mileageRowHeight));
+  const attentionContentHeight = attentionLineGroups.reduce((sum, lines, idx) => sum + (lines.length * 13) + (idx < attentionLineGroups.length - 1 ? 10 : 0), 0) + 6;
+  const section5Height = getSectionHeight(Math.max(90, attentionContentHeight));
   const section4Top = pageHeight - 168;
-  drawSectionShell(page3, margin, section4Top, splitWidth, 270, '4', 'Mileage Log Summary', 'Quarter-by-quarter view of recorded trips, miles, and estimated deduction.', bodyFont, boldFont);
+  const section4BodyTop = drawSectionShell(page3, margin, section4Top, splitWidth, section4Height, '4', 'Mileage Log Summary', 'Quarter-by-quarter view of recorded trips, miles, and estimated deduction.', bodyFont, boldFont);
   if (data.hasMileageRows) {
-    drawTable(page3, margin, section4Top - 86, splitWidth, [
+    drawTable(page3, margin, section4BodyTop, splitWidth, [
       { label: 'Quarter', width: 88 },
       { label: 'Trips', width: 54, align: 'right' },
       { label: 'Miles', width: 86, align: 'right' },
       { label: 'Deduction', width: splitWidth - 88 - 54 - 86, align: 'right' },
-    ], data.quarterlyMileage.map(row => [row.quarter, formatNumber(row.trips), formatNumber(row.miles, 1), formatCurrency(data.currencySymbol, row.deduction)]), bodyFont, boldFont, { headerFontSize: 7.6, bodyFontSize: 8.6, rowHeight: 36 });
+    ], mileageTableRows, bodyFont, boldFont, { rowHeight: mileageRowHeight, bodyFontSize: 8.2, headerFontSize: 7.4 });
   } else {
-    page3.drawText(sanitizePdfText('No mileage trips were recorded for this tax year.'), { x: margin + 18, y: section4Top - 132, size: 10.5, font: bodyFont, color: COLORS.textSoft });
+    page3.drawText(sanitizePdfText('No mileage trips were recorded for this tax year.'), { x: margin + 18, y: section4BodyTop - 18, size: 10.5, font: bodyFont, color: COLORS.textSoft });
   }
 
-  drawSectionShell(page3, margin + splitWidth + splitGap, section4Top, splitWidth, 188, '5', 'Attention Items Before Filing', 'The items below help explain where additional cleanup or support documents may still be needed.', bodyFont, boldFont);
-  let noteY = section4Top - 112;
-  data.attentionItems.slice(0, 4).forEach(item => {
-    const wrapped = splitWords(item, bodyFont, 9.2, splitWidth - 48);
-    wrapped.forEach((line, idx) => {
+  const section5BodyTop = drawSectionShell(page3, margin + splitWidth + splitGap, section4Top, splitWidth, section5Height, '5', 'Attention Items Before Filing', 'The items below help explain where additional cleanup or support documents may still be needed.', bodyFont, boldFont);
+  let noteY = section5BodyTop;
+  attentionLineGroups.forEach(lines => {
+    lines.forEach((line, idx) => {
       if (idx === 0) page3.drawCircle({ x: margin + splitWidth + splitGap + 18, y: noteY + 4, size: 2.6, color: COLORS.blue });
       page3.drawText(sanitizePdfText(line), { x: margin + splitWidth + splitGap + 28, y: noteY, size: 9.2, font: bodyFont, color: COLORS.text });
       noteY -= 13;
     });
-    noteY -= 12;
+    noteY -= 10;
   });
 
-  const closingTop = pageHeight - 428;
-  page3.drawRectangle({ x: margin, y: closingTop - 110, width: contentWidth, height: 110, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
+  const closingTextHeight = measureTextBlockHeight(closingNoteText, bodyFont, 9.2, contentWidth - 36, 4.2);
+  const closingHeight = 34 + closingTextHeight + 18;
+  const closingTop = section4Top - Math.max(section4Height, section5Height) - 18;
+  page3.drawRectangle({ x: margin, y: closingTop - closingHeight, width: contentWidth, height: closingHeight, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
   page3.drawText(sanitizePdfText('Pre-Filing Note'), { x: margin + 18, y: closingTop - 28, size: 12.5, font: boldFont, color: COLORS.text });
-  drawTextBlock(page3, 'MONIEZI organized this package from your recorded ledger entries, linked receipt attachments, and mileage logs for the selected tax year. The totals here are designed to make the value of your records immediately clear: what you earned, what you spent, how well expenses are documented, and what should be addressed before filing. Final tax treatment, classification decisions, and any required adjustments should still be reviewed with your tax professional.', margin + 18, closingTop - 44, contentWidth - 36, bodyFont, 9.2, COLORS.textSoft, 4.2);
+  drawTextBlock(page3, closingNoteText, margin + 18, closingTop - 44, contentWidth - 36, bodyFont, 9.2, COLORS.textSoft, 4.2);
 
   page3.drawLine({ start: { x: margin, y: margin + 18 }, end: { x: pageWidth - margin, y: margin + 18 }, thickness: 1, color: COLORS.line });
-  page3.drawText(sanitizePdfText('MONIEZI Pro Finance · Generated privately from your local business records.'), { x: margin, y: margin, size: 9.2, font: boldFont, color: COLORS.textSoft });
-  const footerRight = `${data.businessName} · Tax Year ${data.taxYear}`;
+  page3.drawText(sanitizePdfText('MONIEZI Pro Finance Â· Generated privately from your local business records.'), { x: margin, y: margin, size: 9.2, font: boldFont, color: COLORS.textSoft });
+  const footerRight = `${data.businessName} Â· Tax Year ${data.taxYear}`;
   const safeFooterRight = sanitizePdfText(footerRight);
   const footerWidth = bodyFont.widthOfTextAtSize(safeFooterRight, 9.2);
   page3.drawText(safeFooterRight, { x: pageWidth - margin - footerWidth, y: margin, size: 9.2, font: bodyFont, color: COLORS.textSoft });
