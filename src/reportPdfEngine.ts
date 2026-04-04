@@ -131,14 +131,14 @@ const drawLabelValueCard = (
   bodyFont: PDFFont,
   boldFont: PDFFont,
 ) => {
-  page.drawRoundedRectangle({ x, y: yTop - height, width, height, borderRadius: 16, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
   page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 16, y: yTop - 30, size: 8.8, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.6 });
   page.drawText(sanitizePdfText(value), { x: x + 16, y: yTop - 66, size: 22, font: boldFont, color: COLORS.text });
   drawTextBlock(page, note, x + 16, yTop - 86, width - 32, bodyFont, 7.5, COLORS.textSoft, 2.5);
 };
 
 const drawMetaCard = (page: PDFPage, x: number, yTop: number, width: number, height: number, label: string, value: string, bodyFont: PDFFont, boldFont: PDFFont) => {
-  page.drawRoundedRectangle({ x, y: yTop - height, width, height, borderRadius: 14, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.blueTint });
+  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.blueTint });
   page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 14, y: yTop - 22, size: 7.8, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.8 });
   const lines = splitWords(value, boldFont, 11, width - 28);
   let lineY = yTop - 52;
@@ -149,8 +149,8 @@ const drawMetaCard = (page: PDFPage, x: number, yTop: number, width: number, hei
 };
 
 const drawSectionShell = (page: PDFPage, x: number, yTop: number, width: number, height: number, sectionNo: string, title: string, subtitle: string, bodyFont: PDFFont, boldFont: PDFFont) => {
-  page.drawRoundedRectangle({ x, y: yTop - height, width, height, borderRadius: 20, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
-  page.drawRoundedRectangle({ x, y: yTop - 86, width, height: 86, borderRadius: 20, color: COLORS.panel, borderColor: COLORS.panelBorder, borderWidth: 0 });
+  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x, y: yTop - 86, width, height: 86, color: COLORS.panel, borderColor: COLORS.panelBorder, borderWidth: 0 });
   page.drawText(sanitizePdfText(`SECTION ${sectionNo}`), { x: x + 18, y: yTop - 28, size: 8.8, font: boldFont, color: COLORS.blue, characterSpacing: 1.6 });
   page.drawText(sanitizePdfText(title), { x: x + 18, y: yTop - 58, size: 15, font: boldFont, color: COLORS.text });
   page.drawText(sanitizePdfText(subtitle), { x: x + 18, y: yTop - 76, size: 7.7, font: bodyFont, color: COLORS.textSoft });
@@ -187,16 +187,16 @@ const drawProgressRow = (page: PDFPage, x: number, yTop: number, width: number, 
   const tone = progressTone(value);
   page.drawText(sanitizePdfText(label), { x, y: yTop - 16, size: 8.4, font: boldFont, color: COLORS.text });
   page.drawText(sanitizePdfText(detail), { x, y: yTop - 30, size: 7.2, font: bodyFont, color: COLORS.textSoft });
-  page.drawRoundedRectangle({ x: x + width - 48, y: yTop - 24, width: 48, height: 20, borderRadius: 10, color: tone.pill });
+  page.drawRectangle({ x: x + width - 48, y: yTop - 24, width: 48, height: 20, color: tone.pill });
   const pct = formatPercent(value);
   const pctWidth = boldFont.widthOfTextAtSize(sanitizePdfText(pct), 8.2);
   page.drawText(sanitizePdfText(pct), { x: x + width - 24 - pctWidth / 2, y: yTop - 17, size: 8.2, font: boldFont, color: tone.text });
-  page.drawRoundedRectangle({ x, y: yTop - 46, width, height: 8, borderRadius: 4, color: tone.track });
-  page.drawRoundedRectangle({ x, y: yTop - 46, width: Math.max(24, width * Math.max(0, Math.min(1, value / 100))), height: 8, borderRadius: 4, color: tone.bar });
+  page.drawRectangle({ x, y: yTop - 46, width, height: 8, color: tone.track });
+  page.drawRectangle({ x, y: yTop - 46, width: Math.max(24, width * Math.max(0, Math.min(1, value / 100))), height: 8, color: tone.bar });
 };
 
 const drawMiniStat = (page: PDFPage, x: number, yTop: number, width: number, height: number, label: string, value: string, note: string, bodyFont: PDFFont, boldFont: PDFFont) => {
-  page.drawRoundedRectangle({ x, y: yTop - height, width, height, borderRadius: 16, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1,1,1) });
+  page.drawRectangle({ x, y: yTop - height, width, height, borderWidth: 1, borderColor: COLORS.panelBorder, color: rgb(1,1,1) });
   page.drawText(sanitizePdfText(label).toUpperCase(), { x: x + 16, y: yTop - 24, size: 8.2, font: boldFont, color: COLORS.textSoft, characterSpacing: 1.5 });
   page.drawText(sanitizePdfText(value), { x: x + 16, y: yTop - 58, size: 20, font: boldFont, color: COLORS.text });
   drawTextBlock(page, note, x + 16, yTop - 76, width - 32, bodyFont, 7.1, COLORS.textSoft, 2.2);
@@ -388,7 +388,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   });
 
   const closingTop = pageHeight - 428;
-  page3.drawRoundedRectangle({ x: margin, y: closingTop - 110, width: contentWidth, height: 110, borderRadius: 18, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
+  page3.drawRectangle({ x: margin, y: closingTop - 110, width: contentWidth, height: 110, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
   page3.drawText(sanitizePdfText('Pre-Filing Note'), { x: margin + 18, y: closingTop - 28, size: 12.5, font: boldFont, color: COLORS.text });
   drawTextBlock(page3, 'MONIEZI organized this package from your recorded ledger entries, linked receipt attachments, and mileage logs for the selected tax year. The totals here are designed to make the value of your records immediately clear: what you earned, what you spent, how well expenses are documented, and what should be addressed before filing. Final tax treatment, classification decisions, and any required adjustments should still be reviewed with your tax professional.', margin + 18, closingTop - 44, contentWidth - 36, bodyFont, 9.2, COLORS.textSoft, 4.2);
 
