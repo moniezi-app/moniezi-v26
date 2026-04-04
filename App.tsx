@@ -230,16 +230,9 @@ const downloadBlob = (blob: Blob, filename: string) => {
 
 const savePdfBlobToDevice = async (blob: Blob, filename: string, shareText: string) => {
   const navAny = (typeof navigator !== 'undefined' ? navigator : null) as any;
-  const ua = String(navAny?.userAgent || '');
-  const isStandalone = typeof window !== 'undefined' && (
-    window.matchMedia?.('(display-mode: standalone)')?.matches ||
-    navAny?.standalone === true
-  );
-  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(ua) || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)')?.matches);
-  const shouldPreferShare = isStandalone || isMobileDevice;
 
   try {
-    if (shouldPreferShare && typeof File !== 'undefined' && navAny?.share) {
+    if (typeof File !== 'undefined' && navAny?.share) {
       const file = new File([blob], filename, { type: blob.type || 'application/pdf' });
       const canShareFiles = !navAny.canShare || navAny.canShare({ files: [file] });
 
@@ -4519,7 +4512,7 @@ const demoMileageTrips: MileageTrip[] = [
     try {
       const pdfBytes = await generateTaxSummaryPdfBytes(pdfData);
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      await savePdfBlobToDevice(blob, filename, `MONIEZI Tax Prep Package PDF for ${taxPrepYear}`);
+      await savePdfBlobToDevice(blob, filename, `Tax Summary PDF for ${taxPrepYear}`);
       showToast(`Exported Tax Summary PDF for ${taxPrepYear}`, 'success');
     } catch (e) {
       console.error('Tax summary PDF export failed:', {
