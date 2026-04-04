@@ -5,4 +5,4 @@ MONIEZI v26 package
 - Service worker cache version bumped for clean deployment pickup
 - Slim source-only package
 
-Updated: v26.0.2 tax prep PDF layout rebuilt across executive snapshot, documentation readiness, expense breakdown, and mileage/handoff pages.
+Updated: v26.0.3 tax prep PDF header layout refined for mobile-safe viewing with cleaner title flow and repositioned metadata blocks on executive snapshot and mileage handoff pages.

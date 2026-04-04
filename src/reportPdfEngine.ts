@@ -367,12 +367,18 @@ const drawFooter = (page: PDFPage, textLeft: string, textRight: string, fonts: F
   page.drawText(right, { x: PAGE.width - PAGE.marginX - rightWidth, y: FOOTER_Y, size: 8.5, font: fonts.body, color: COLORS.inkSoft });
 };
 
+type TitleOptions = {
+  titleSize?: number;
+  titleWidth?: number;
+  maxTitleLines?: number;
+};
+
 const drawPageTitle = (
   page: PDFPage,
   title: string,
   subtitle: string,
   fonts: FontSet,
-  rightBlocks: Array<{ label: string; value: string; width: number; height?: number }> = [],
+  options: TitleOptions = {},
 ) => {
   const topY = PAGE.height - PAGE.marginTop;
   page.drawText('MONIEZI TAX PREP PACKAGE', {
@@ -384,23 +390,42 @@ const drawPageTitle = (
     characterSpacing: 1.1,
   });
 
-  let rightY = topY + 14;
-  rightBlocks.forEach(block => {
-    drawInfoBox(page, PAGE.width - PAGE.marginX - block.width, rightY, block.width, block.label, block.value, fonts, block.height ?? 46);
-    rightY -= (block.height ?? 46) + 10;
+  const titleSize = options.titleSize ?? 26;
+  const titleWidth = options.titleWidth ?? CONTENT_WIDTH;
+  const titleLines = splitLines(title, fonts.bold, titleSize, titleWidth).slice(0, options.maxTitleLines ?? 2);
+  const titleLineGap = Math.max(6, titleSize * 0.22);
+  let titleY = topY - 56;
+  titleLines.forEach(line => {
+    page.drawText(sanitizePdfText(line), {
+      x: PAGE.marginX,
+      y: titleY,
+      size: titleSize,
+      font: fonts.bold,
+      color: COLORS.ink,
+    });
+    titleY -= titleSize + titleLineGap;
   });
-  const rightBottomY = rightBlocks.length ? rightY + 10 : topY - 10;
 
-  const titleWidth = CONTENT_WIDTH - (rightBlocks.length ? 210 : 0);
-  page.drawText(sanitizePdfText(title), {
-    x: PAGE.marginX,
-    y: topY - 56,
-    size: 26,
-    font: fonts.bold,
-    color: COLORS.ink,
+  const subtitleTop = titleY + 6;
+  return drawTextBlock(page, subtitle, PAGE.marginX, subtitleTop, titleWidth, fonts.body, 8.9, COLORS.inkSoft, 3.5);
+};
+
+const drawInfoBoxRow = (
+  page: PDFPage,
+  yTop: number,
+  blocks: Array<{ label: string; value: string; width: number; height?: number }>,
+  fonts: FontSet,
+  align: 'left' | 'right' = 'left',
+  gap = 12,
+) => {
+  const totalWidth = blocks.reduce((sum, block) => sum + block.width, 0) + Math.max(0, blocks.length - 1) * gap;
+  let x = align === 'right' ? PAGE.width - PAGE.marginX - totalWidth : PAGE.marginX;
+  const maxHeight = Math.max(...blocks.map(block => block.height ?? 46));
+  blocks.forEach(block => {
+    drawInfoBox(page, x, yTop, block.width, block.label, block.value, fonts, block.height ?? 46);
+    x += block.width + gap;
   });
-  const subtitleBottom = drawTextBlock(page, subtitle, PAGE.marginX, topY - 86, titleWidth, fonts.body, 8.9, COLORS.inkSoft, 3.5);
-  return Math.min(subtitleBottom, rightBottomY - 12);
+  return yTop - maxHeight - 16;
 };
 
 const getPreparedByValue = (data: TaxSummaryPdfData) => {
@@ -478,11 +503,18 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     `Executive Tax Snapshot ${sanitizePdfText(data.taxYear)}`,
     'A concise year-end package summarizing income, deductions, mileage, and supporting documentation from your MONIEZI records.',
     fonts,
+    { titleSize: 24, maxTitleLines: 2 },
+  );
+
+  y = drawInfoBoxRow(
+    page1,
+    y - 8,
     [
-      { label: 'Business', value: data.businessName, width: 182, height: 52 },
-      { label: 'Tax year', value: data.taxYear, width: 182 },
-      { label: 'Reporting period', value: data.reportingPeriodLabel, width: 182, height: 52 },
+      { label: 'Business', value: data.businessName, width: 162, height: 50 },
+      { label: 'Tax year', value: data.taxYear, width: 162, height: 50 },
+      { label: 'Reporting period', value: data.reportingPeriodLabel, width: 167, height: 50 },
     ],
+    fonts,
   );
 
   const page1Cards = [
@@ -526,7 +558,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     page1.drawText(sanitizePdfText(row.value), { x: PAGE.marginX + CONTENT_WIDTH - 14 - valueWidth, y: rowTop - 17, size: 9.3, font: fonts.bold, color: COLORS.ink });
   });
 
-  drawFooter(page1, 'MONIEZI Pro Finance — Generated privately from your local business records.', `${data.businessName} — Tax Year ${data.taxYear}`, fonts, 'Page 1 of 3');
+  drawFooter(page1, 'MONIEZI Pro Finance — Generated privately from your local business records.', `${data.businessName} — Tax Year ${data.taxYear}`, fonts, 'Page 1 of 4');
 
   // PAGE 2
   y = drawPageTitle(
@@ -616,7 +648,15 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     'Mileage, Filing Checks & Handoff',
     'Quarter-level mileage review, open attention items, and final pre-filing guidance for this package.',
     fonts,
-    [{ label: 'Reporting period', value: data.reportingPeriodLabel, width: 176, height: 52 }],
+    { titleSize: 22, maxTitleLines: 2 },
+  );
+
+  y = drawInfoBoxRow(
+    page4,
+    y - 8,
+    [{ label: 'Reporting period', value: data.reportingPeriodLabel, width: 196, height: 50 }],
+    fonts,
+    'right',
   );
 
   const splitGap = 14;
@@ -627,7 +667,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   const attentionBodyHeight = Math.max(88, attentionItems.reduce((sum, item, idx) => sum + textBlockHeight(item, fonts.body, 9, splitWidth - 46, 3.5) + (idx < attentionItems.length - 1 ? 10 : 0), 0));
   const section5Height = SECTION_HEADER_HEIGHT + SECTION_INSET + attentionBodyHeight + SECTION_INSET;
   const topSectionsHeight = Math.max(section4Height, section5Height);
-  const topSectionsY = y - 14;
+  const topSectionsY = y - 10;
 
   const section4BodyTop = drawSectionCard(
     page4,
