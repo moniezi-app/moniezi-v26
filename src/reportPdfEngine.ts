@@ -159,7 +159,7 @@ const drawSectionShell = (page: PDFPage, x: number, yTop: number, width: number,
 };
 
 const drawKeyValueRows = (page: PDFPage, x: number, yTop: number, width: number, rows: Array<{ key: string; note: string; value: string; emphasize?: boolean }>, bodyFont: PDFFont, boldFont: PDFFont) => {
-  const rowHeight = 54;
+  const rowHeight = 46;
   rows.forEach((row, idx) => {
     const rowTop = yTop - idx * rowHeight;
     if (idx > 0) {
@@ -168,11 +168,11 @@ const drawKeyValueRows = (page: PDFPage, x: number, yTop: number, width: number,
     if (row.emphasize) {
       page.drawRectangle({ x, y: rowTop - rowHeight, width, height: rowHeight, color: COLORS.blueTint });
     }
-    page.drawText(sanitizePdfText(row.key), { x: x + 14, y: rowTop - 24, size: 8.6, font: boldFont, color: COLORS.text });
-    page.drawText(sanitizePdfText(row.note), { x: x + 14, y: rowTop - 40, size: 7.2, font: row.emphasize ? boldFont : bodyFont, color: COLORS.textSoft });
+    page.drawText(sanitizePdfText(row.key), { x: x + 14, y: rowTop - 20, size: 8.6, font: boldFont, color: COLORS.text });
+    page.drawText(sanitizePdfText(row.note), { x: x + 14, y: rowTop - 34, size: 7.2, font: row.emphasize ? boldFont : bodyFont, color: COLORS.textSoft });
     const safeValue = sanitizePdfText(row.value);
     const valueWidth = boldFont.widthOfTextAtSize(safeValue, 9.4);
-    page.drawText(safeValue, { x: x + width - 14 - valueWidth, y: rowTop - 24, size: 9.4, font: boldFont, color: COLORS.text });
+    page.drawText(safeValue, { x: x + width - 14 - valueWidth, y: rowTop - 20, size: 9.4, font: boldFont, color: COLORS.text });
   });
 };
 
@@ -310,7 +310,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   });
 
   const section1Top = pageHeight - 422;
-  drawSectionShell(page1, margin, section1Top, contentWidth, 343, '1', 'Tax-Ready Financial Snapshot', 'Core totals your accountant typically needs first, presented in one clean year-end view.', bodyFont, boldFont);
+  drawSectionShell(page1, margin, section1Top, contentWidth, 408, '1', 'Tax-Ready Financial Snapshot', 'Core totals your accountant typically needs first, presented in one clean year-end view.', bodyFont, boldFont);
   drawKeyValueRows(page1, margin, section1Top - 86, contentWidth, [
     { key: 'Gross Business Income', note: 'Total recorded income transactions for the selected tax year.', value: formatCurrency(data.currencySymbol, data.totalIncome) },
     { key: 'Deductible Business Expenses', note: 'Total expense entries tracked in MONIEZI before any external adjustments.', value: formatCurrency(data.currencySymbol, data.totalExpenses) },
@@ -329,7 +329,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   drawMetaCard(page2, 436, pageHeight - 78, 119, 44, 'Expense Categories', formatNumber(data.expenseCategoriesCount), bodyFont, boldFont);
 
   const section2Top = pageHeight - 150;
-  drawSectionShell(page2, margin, section2Top, contentWidth, 272, '2', 'Audit Readiness & Documentation Status', 'A quick view of how complete and organized your records look before filing.', bodyFont, boldFont);
+  drawSectionShell(page2, margin, section2Top, contentWidth, 310, '2', 'Audit Readiness & Documentation Status', 'A quick view of how complete and organized your records look before filing.', bodyFont, boldFont);
   const progressBaseY = section2Top - 104;
   drawProgressRow(page2, margin + 18, progressBaseY, contentWidth - 36, 'Receipt Coverage', `${formatNumber(data.linkedReceipts)} linked receipts across ${formatNumber(data.expenseItemsCount)} deductible expense items.`, data.receiptCoveragePct, bodyFont, boldFont);
   drawProgressRow(page2, margin + 18, progressBaseY - 74, contentWidth - 36, 'Expense Review Status', `${formatNumber(data.reviewedExpenseCount)} reviewed · ${formatNumber(data.pendingReviewCount)} pending review.`, data.reviewCoveragePct, bodyFont, boldFont);
@@ -337,12 +337,12 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   const miniTop = section2Top - 222;
   const miniGap = 14;
   const miniWidth = (contentWidth - miniGap * 2 - 36) / 3;
-  drawMiniStat(page2, margin + 18, miniTop, miniWidth, 104, 'Package Coverage', formatNumber(data.ledgerTransactions), 'Total ledger transactions included in this tax-prep package export.', bodyFont, boldFont);
-  drawMiniStat(page2, margin + 18 + miniWidth + miniGap, miniTop, miniWidth, 104, 'Items Requiring Attention', formatNumber(data.itemsRequiringAttention), 'Headline open items across receipts, review status, categorization, and mileage completeness.', bodyFont, boldFont);
-  drawMiniStat(page2, margin + 18 + (miniWidth + miniGap) * 2, miniTop, miniWidth, 104, 'Prepared Privately', '100%', 'Generated directly from your MONIEZI records for local export and review.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18, miniTop, miniWidth, 88, 'Package Coverage', formatNumber(data.ledgerTransactions), 'Total ledger transactions included in this tax-prep package export.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18 + miniWidth + miniGap, miniTop, miniWidth, 88, 'Items Requiring Attention', formatNumber(data.itemsRequiringAttention), 'Headline open items across receipts, review status, categorization, and mileage completeness.', bodyFont, boldFont);
+  drawMiniStat(page2, margin + 18 + (miniWidth + miniGap) * 2, miniTop, miniWidth, 88, 'Prepared Privately', '100%', 'Generated directly from your MONIEZI records for local export and review.', bodyFont, boldFont);
 
   const section3Top = pageHeight - 438;
-  drawSectionShell(page2, margin, section3Top, contentWidth, 286, '3', 'Deductible Expense Breakdown', 'Top expense categories by dollar amount, including category share and receipt-backed count.', bodyFont, boldFont);
+  drawSectionShell(page2, margin, section3Top, contentWidth, 368, '3', 'Deductible Expense Breakdown', 'Top expense categories by dollar amount, including category share and receipt-backed count.', bodyFont, boldFont);
   drawTable(page2, margin, section3Top - 86, contentWidth, [
     { label: 'Expense Category', width: 235 },
     { label: 'Amount', width: 120, align: 'right' },
@@ -363,7 +363,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
   const splitGap = 16;
   const splitWidth = (contentWidth - splitGap) / 2;
   const section4Top = pageHeight - 168;
-  drawSectionShell(page3, margin, section4Top, splitWidth, 248, '4', 'Mileage Log Summary', 'Quarter-by-quarter view of recorded trips, miles, and estimated deduction.', bodyFont, boldFont);
+  drawSectionShell(page3, margin, section4Top, splitWidth, 270, '4', 'Mileage Log Summary', 'Quarter-by-quarter view of recorded trips, miles, and estimated deduction.', bodyFont, boldFont);
   if (data.hasMileageRows) {
     drawTable(page3, margin, section4Top - 86, splitWidth, [
       { label: 'Quarter', width: 88 },
@@ -375,7 +375,7 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     page3.drawText(sanitizePdfText('No mileage trips were recorded for this tax year.'), { x: margin + 18, y: section4Top - 132, size: 10.5, font: bodyFont, color: COLORS.textSoft });
   }
 
-  drawSectionShell(page3, margin + splitWidth + splitGap, section4Top, splitWidth, 248, '5', 'Attention Items Before Filing', 'The items below help explain where additional cleanup or support documents may still be needed.', bodyFont, boldFont);
+  drawSectionShell(page3, margin + splitWidth + splitGap, section4Top, splitWidth, 188, '5', 'Attention Items Before Filing', 'The items below help explain where additional cleanup or support documents may still be needed.', bodyFont, boldFont);
   let noteY = section4Top - 112;
   data.attentionItems.slice(0, 4).forEach(item => {
     const wrapped = splitWords(item, bodyFont, 9.2, splitWidth - 48);
@@ -387,8 +387,8 @@ export async function generateTaxSummaryPdfBytes(data: TaxSummaryPdfData): Promi
     noteY -= 12;
   });
 
-  const closingTop = pageHeight - 468;
-  page3.drawRoundedRectangle({ x: margin, y: closingTop - 120, width: contentWidth, height: 120, borderRadius: 18, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
+  const closingTop = pageHeight - 428;
+  page3.drawRoundedRectangle({ x: margin, y: closingTop - 110, width: contentWidth, height: 110, borderRadius: 18, borderWidth: 1, borderColor: COLORS.panelBorder, color: COLORS.panel });
   page3.drawText(sanitizePdfText('Pre-Filing Note'), { x: margin + 18, y: closingTop - 28, size: 12.5, font: boldFont, color: COLORS.text });
   drawTextBlock(page3, 'MONIEZI organized this package from your recorded ledger entries, linked receipt attachments, and mileage logs for the selected tax year. The totals here are designed to make the value of your records immediately clear: what you earned, what you spent, how well expenses are documented, and what should be addressed before filing. Final tax treatment, classification decisions, and any required adjustments should still be reviewed with your tax professional.', margin + 18, closingTop - 44, contentWidth - 36, bodyFont, 9.2, COLORS.textSoft, 4.2);
 
