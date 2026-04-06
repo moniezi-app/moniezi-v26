@@ -246,9 +246,10 @@ const savePdfBlobToDevice = async (blob: Blob, filename: string, shareText: stri
       }
     }
   } catch (error) {
-    if ((error as any)?.name !== 'AbortError') {
-      console.warn('PDF share failed, falling back to download.', error);
+    if ((error as any)?.name === 'AbortError') {
+      return 'cancelled' as const;
     }
+    console.warn('PDF share failed, falling back to download.', error);
   }
 
   downloadBlob(blob, filename);
@@ -4370,7 +4371,7 @@ const demoMileageTrips: MileageTrip[] = [
     showToast(`Exported ${files.length - 1} receipt(s) ZIP for ${taxPrepYear}`, 'success');
   };
 
-  const handleExportTaxSummaryPDF = async () => {
+  const buildTaxSummaryPdfBlob = async () => {
     const incomeTx = txForTaxYear.filter(t => t.type === 'income');
     const expenseTx = txForTaxYear.filter(t => t.type === 'expense');
     const totalIncome = incomeTx.reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -4509,19 +4510,48 @@ const demoMileageTrips: MileageTrip[] = [
       currencySymbol: settings.currencySymbol || '$',
     };
 
+    const pdfBytes = await generateTaxSummaryPdfBytes(pdfData);
+    return {
+      blob: new Blob([pdfBytes], { type: 'application/pdf' }),
+      filename,
+    };
+  };
+
+  const handleDownloadTaxSummaryPDF = async () => {
     try {
-      const pdfBytes = await generateTaxSummaryPdfBytes(pdfData);
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      await savePdfBlobToDevice(blob, filename, `Tax Summary PDF for ${taxPrepYear}`);
-      showToast(`Exported Tax Summary PDF for ${taxPrepYear}`, 'success');
+      const { blob, filename } = await buildTaxSummaryPdfBlob();
+      downloadBlob(blob, filename);
+      showToast(`Downloaded Tax Summary PDF for ${taxPrepYear}`, 'success');
     } catch (e) {
-      console.error('Tax summary PDF export failed:', {
+      console.error('Tax summary PDF download failed:', {
         name: (e as any)?.name,
         message: (e as any)?.message,
         stack: (e as any)?.stack,
         error: e,
       });
-      showToast('Failed to export Tax Summary PDF.', 'error');
+      showToast('Failed to download Tax Summary PDF.', 'error');
+    }
+  };
+
+  const handleShareTaxSummaryPDF = async () => {
+    try {
+      const { blob, filename } = await buildTaxSummaryPdfBlob();
+      const result = await savePdfBlobToDevice(blob, filename, `Tax Summary PDF for ${taxPrepYear}`);
+      if (result === 'shared') {
+        showToast('Share opened', 'success');
+      } else if (result === 'downloaded') {
+        showToast('Sharing not available on this device. PDF downloaded instead.', 'success');
+      } else {
+        showToast('Share canceled', 'info');
+      }
+    } catch (e) {
+      console.error('Tax summary PDF share failed:', {
+        name: (e as any)?.name,
+        message: (e as any)?.message,
+        stack: (e as any)?.stack,
+        error: e,
+      });
+      showToast('Failed to share Tax Summary PDF.', 'error');
     }
   };
 
@@ -7510,7 +7540,8 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
                     <button onClick={handleExportTaxLedgerCSV} className="px-4 py-3 rounded-lg bg-slate-900 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-slate-800 active:scale-95 transition-all">Export Tax Ledger CSV</button>
                     <button onClick={handleExportMileageCSV} className="px-4 py-3 rounded-lg bg-slate-900 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-slate-800 active:scale-95 transition-all">Export Mileage CSV</button>
                     <button onClick={handleExportReceiptsZip} className="px-4 py-3 rounded-lg bg-slate-900 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-slate-800 active:scale-95 transition-all">Export Linked Receipts ZIP</button>
-                    <button onClick={handleExportTaxSummaryPDF} className="px-4 py-3 rounded-lg bg-blue-600 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-blue-700 active:scale-95 transition-all">Export Tax Summary PDF</button>
+                    <button onClick={handleShareTaxSummaryPDF} className="px-4 py-3 rounded-lg bg-blue-600 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-blue-700 active:scale-95 transition-all">Share Tax Summary PDF</button>
+                    <button onClick={handleDownloadTaxSummaryPDF} className="px-4 py-3 rounded-lg bg-slate-900 text-white font-extrabold uppercase tracking-widest text-xs hover:bg-slate-800 active:scale-95 transition-all md:col-span-2">Download Tax Summary PDF</button>
                   </div>
 
                   <div className="mt-6 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-5">

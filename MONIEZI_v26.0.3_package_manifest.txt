@@ -1,8 +1,0 @@
-MONIEZI v26 package
-- Rebuilt Tax Prep Package PDF layout into a stable 4-page premium structure
-- Fixed Tax Prep Package filename export to MONIEZI_Tax_Prep_Package_<year>.pdf
-- Preserved mobile-safe PDF share/download handoff
-- Service worker cache version bumped for clean deployment pickup
-- Slim source-only package
-
-Updated: v26.0.3 tax prep PDF header layout refined for mobile-safe viewing with cleaner title flow and repositioned metadata blocks on executive snapshot and mileage handoff pages.
