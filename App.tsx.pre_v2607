@@ -6364,7 +6364,7 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
         </div>
       </header>
 
-      <div key={`main-scroll-${currentPage}`} ref={mainScrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 pt-5 sm:pt-6 md:pt-7 no-print custom-scrollbar" style={{ paddingBottom: 'calc(11rem + env(safe-area-inset-bottom, 0px))' }} role="main">
+      <div key={`main-scroll-${currentPage}`} ref={mainScrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 no-print custom-scrollbar" style={{ paddingBottom: 'calc(11rem + env(safe-area-inset-bottom, 0px))' }} role="main">
 
       <PageErrorBoundary key={currentPage} onReset={() => setCurrentPage(Page.Dashboard)}>
 
