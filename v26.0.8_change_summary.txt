@@ -1,0 +1,4 @@
+MONIEZI v26.0.8
+- Ledger top-right plus now opens Quick Add (same chooser model as Home)
+- Prevents Invoice/Estimate add drawer from depending on prior billing page state
+- Keeps Income/Expenses top-right plus contextual

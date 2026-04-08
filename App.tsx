@@ -3063,6 +3063,23 @@ export default function App() {
     setShowQuickAddMenu(true);
   };
 
+  const handleLedgerAddAction = () => {
+    // Ledger is a mixed workspace, so the add button should never guess between
+    // invoice vs estimate based on prior billing-page state. Always show the same
+    // quick-add chooser used on Home.
+    handleOpenQuickAdd();
+  };
+
+  const handleContextualHeaderAdd = () => {
+    if (currentPage === Page.AllTransactions || currentPage === Page.Ledger) {
+      handleLedgerAddAction();
+      return;
+    }
+
+    const fabType = getHeaderFabType();
+    handleOpenFAB(fabType, fabType === 'billing' ? 'invoice' : undefined);
+  };
+
   const handleQuickAddSelection = (action: 'income' | 'expense' | 'invoice' | 'estimate' | 'mileage' | 'client') => {
     setShowQuickAddMenu(false);
 
@@ -6737,7 +6754,7 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
                      </div>
                  </div>
                  {(currentPage === Page.Income || currentPage === Page.Expenses || (currentPage === Page.AllTransactions || currentPage === Page.Ledger)) && (
-                    <button onClick={() => handleOpenFAB(getHeaderFabType())} className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all flex-shrink-0"><Plus size={20} className="sm:w-6 sm:h-6" strokeWidth={2.5} /></button>
+                    <button onClick={handleContextualHeaderAdd} className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all flex-shrink-0"><Plus size={20} className="sm:w-6 sm:h-6" strokeWidth={2.5} /></button>
                  )}
              </div>
 
@@ -6777,7 +6794,7 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
 
              <div className="space-y-4">
                {((currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? filteredLedgerItems : currentPage === Page.Income ? filteredTransactions.filter(t => t.type === 'income') : filteredExpenseItems).length === 0 ? (
-                  <EmptyState icon={currentPage === Page.Income ? <Wallet size={32} /> : currentPage === Page.Expenses ? <Receipt size={32} /> : <History size={32} />} title="No Items Found" subtitle="No activity found for the selected period." action={() => { const fabType = getHeaderFabType(); handleOpenFAB(fabType, fabType === 'billing' ? 'invoice' : undefined); }} actionLabel="Add Transaction" />
+                  <EmptyState icon={currentPage === Page.Income ? <Wallet size={32} /> : currentPage === Page.Expenses ? <Receipt size={32} /> : <History size={32} />} title="No Items Found" subtitle="No activity found for the selected period." action={handleContextualHeaderAdd} actionLabel="Add Transaction" />
                ) : (
                 ((currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? filteredLedgerItems : currentPage === Page.Income ? filteredTransactions.filter(t => t.type === 'income') : filteredExpenseItems).map((item: any) => {
                   const isInvoice = item.dataType === 'invoice';
