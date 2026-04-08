@@ -6726,7 +6726,7 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
 
              <div className="space-y-4">
                {((currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? filteredLedgerItems : currentPage === Page.Income ? filteredTransactions.filter(t => t.type === 'income') : filteredExpenseItems).length === 0 ? (
-                  <EmptyState icon={currentPage === Page.Income ? <Wallet size={32} /> : currentPage === Page.Expenses ? <Receipt size={32} /> : <History size={32} />} title="No Items Found" subtitle="No activity found for the selected period." action={() => { const fabType = getHeaderFabType(); handleOpenFAB(fabType, fabType === 'billing' ? 'invoice' : undefined); }} actionLabel="Add Transaction" />
+                  <EmptyState icon={currentPage === Page.Income ? <Wallet size={32} /> : currentPage === Page.Expenses ? <Receipt size={32} /> : <History size={32} />} title="No Items Found" subtitle="No activity found for the selected period." action={() => handleOpenFAB('income')} actionLabel="Add Transaction" />
                ) : (
                 ((currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? filteredLedgerItems : currentPage === Page.Income ? filteredTransactions.filter(t => t.type === 'income') : filteredExpenseItems).map((item: any) => {
                   const isInvoice = item.dataType === 'invoice';
@@ -9609,8 +9609,7 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
               <button 
                 onClick={() => {
                   if (currentPage === Page.AllTransactions || currentPage === Page.Ledger) {
-                    const fabType = getHeaderFabType();
-                    handleOpenFAB(fabType, fabType === 'billing' ? 'invoice' : undefined);
+                    handleOpenFAB('income');
                   } else {
                     setCurrentPage(Page.AllTransactions);
                   }
