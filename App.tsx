@@ -1241,6 +1241,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit_tx' | 'edit_inv' | 'tax_payments' | 'create_cat'>('add');
   const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'billing'>('income');
+  const [showQuickAddMenu, setShowQuickAddMenu] = useState(false);
   const [billingDocType, setBillingDocType] = useState<'invoice' | 'estimate'>('invoice');
   const [activeItem, setActiveItem] = useState<Record<string, any>>({});
   const [activeTaxPayment, setActiveTaxPayment] = useState<Partial<TaxPayment>>({ type: 'Estimated', date: new Date().toISOString().split('T')[0] });
@@ -3056,6 +3057,46 @@ export default function App() {
       return 'income'; // 'all'
     }
     return 'expense';
+  };
+
+  const handleOpenQuickAdd = () => {
+    setShowQuickAddMenu(true);
+  };
+
+  const handleQuickAddSelection = (action: 'income' | 'expense' | 'invoice' | 'estimate' | 'mileage' | 'client') => {
+    setShowQuickAddMenu(false);
+
+    if (action === 'income') {
+      handleOpenFAB('income');
+      return;
+    }
+
+    if (action === 'expense') {
+      handleOpenFAB('expense');
+      return;
+    }
+
+    if (action === 'invoice') {
+      setBillingDocType('invoice');
+      setCurrentPage(Page.Invoices);
+      handleOpenFAB('billing', 'invoice');
+      return;
+    }
+
+    if (action === 'estimate') {
+      setBillingDocType('estimate');
+      setCurrentPage(Page.Invoices);
+      handleOpenFAB('billing', 'estimate');
+      return;
+    }
+
+    if (action === 'mileage') {
+      setCurrentPage(Page.Mileage);
+      return;
+    }
+
+    setEditingClient({ status: 'lead' });
+    setIsClientModalOpen(true);
   };
   
   const handleEditItem = (item: any) => {
@@ -6329,6 +6370,16 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
 
         {(currentPage === Page.Dashboard) && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between pl-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex-shrink-0">
+                  <LayoutGrid size={20} className="sm:w-6 sm:h-6" strokeWidth={1.5} />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950 dark:text-white font-brand">Home</h2>
+              </div>
+              <button onClick={handleOpenQuickAdd} className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all flex-shrink-0" aria-label="Add new record"><Plus size={20} className="sm:w-6 sm:h-6" strokeWidth={2.5} /></button>
+            </div>
+
             <div className="bg-white dark:bg-gradient-to-br dark:from-blue-800 dark:to-indigo-950 p-6 sm:p-8 rounded-xl shadow-xl dark:shadow-none border border-slate-200 dark:border-white/10 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-80 h-80 bg-slate-100/50 dark:bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-slate-200/50 transition-colors duration-700 pointer-events-none" />
 
@@ -9604,23 +9655,17 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
               <span className={`text-[11px] mt-0.5 ${currentPage === Page.Invoices && billingDocType === 'estimate' ? 'font-bold text-blue-600 dark:text-white' : 'font-semibold'}`} style={{ color: currentPage === Page.Invoices && billingDocType === 'estimate' ? undefined : 'var(--nav-inactive)' }}>Estimate</span>
             </button>
 
-            {/* Center FAB - Ledger with + */}
-            <div className="flex-1 flex flex-col items-center -mt-3">
-              <button 
-                onClick={() => {
-                  if (currentPage === Page.AllTransactions || currentPage === Page.Ledger) {
-                    const fabType = getHeaderFabType();
-                    handleOpenFAB(fabType, fabType === 'billing' ? 'invoice' : undefined);
-                  } else {
-                    setCurrentPage(Page.AllTransactions);
-                  }
-                }} 
-                className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30 transition-all active:scale-95 bg-blue-600"
-              >
-                <Plus size={24} strokeWidth={2.5} className="text-white" />
-              </button>
-              <span className={`text-[11px] mt-1 ${(currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? 'font-bold text-blue-600 dark:text-blue-400' : 'font-semibold'}`} style={{ color: (currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? undefined : 'var(--nav-inactive)' }}>Ledger</span>
-            </div>
+            {/* Center Nav - Ledger only */}
+            <button 
+              onClick={() => setCurrentPage(Page.AllTransactions)} 
+              className={`flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 ${(currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? 'text-blue-600 dark:text-white' : ''}`}
+              style={{ color: (currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? undefined : 'var(--nav-inactive)' }}
+            >
+              <div className={`p-1.5 rounded-lg ${(currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? 'bg-blue-100 dark:bg-slate-800' : ''}`}>
+                <History size={20} strokeWidth={(currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? 2 : 1.5} />
+              </div>
+              <span className={`text-[11px] mt-0.5 ${(currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? 'font-bold text-blue-600 dark:text-white' : 'font-semibold'}`} style={{ color: (currentPage === Page.AllTransactions || currentPage === Page.Ledger) ? undefined : 'var(--nav-inactive)' }}>Ledger</span>
+            </button>
 
             {/* Mileage */}
             <button 
@@ -10014,6 +10059,46 @@ html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-col
       
 
       {/* Client Modal */}
+      {showQuickAddMenu && (
+        <div className="fixed inset-0 z-[105] flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 modal-overlay" onClick={() => setShowQuickAddMenu(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <div className="text-lg font-extrabold text-slate-900 dark:text-white">Quick Add</div>
+                <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Choose what you want to create.</div>
+              </div>
+              <button onClick={() => setShowQuickAddMenu(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close quick add"><X size={18} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-4">
+              <button onClick={() => handleQuickAddSelection('income')} className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-emerald-100 dark:hover:bg-emerald-500/15">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Add Income</div>
+                <div className="mt-1 text-xs font-medium text-emerald-700/80 dark:text-emerald-300/80">Record a payment or deposit.</div>
+              </button>
+              <button onClick={() => handleQuickAddSelection('expense')} className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-red-100 dark:hover:bg-red-500/15">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-red-700 dark:text-red-300">Add Expense</div>
+                <div className="mt-1 text-xs font-medium text-red-700/80 dark:text-red-300/80">Log a purchase or bill.</div>
+              </button>
+              <button onClick={() => handleQuickAddSelection('invoice')} className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-500/10 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-blue-100 dark:hover:bg-blue-500/15">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">New Invoice</div>
+                <div className="mt-1 text-xs font-medium text-blue-700/80 dark:text-blue-300/80">Create a bill to send.</div>
+              </button>
+              <button onClick={() => handleQuickAddSelection('estimate')} className="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-indigo-100 dark:hover:bg-indigo-500/15">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">New Estimate</div>
+                <div className="mt-1 text-xs font-medium text-indigo-700/80 dark:text-indigo-300/80">Draft a proposal or quote.</div>
+              </button>
+              <button onClick={() => handleQuickAddSelection('mileage')} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-slate-100 dark:hover:bg-slate-800">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Mileage</div>
+                <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">Go to the mileage tracker.</div>
+              </button>
+              <button onClick={() => handleQuickAddSelection('client')} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 px-4 py-4 text-left transition-all active:scale-[0.98] hover:bg-slate-100 dark:hover:bg-slate-800">
+                <div className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Add Client</div>
+                <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">Create a new client profile.</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isClientModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 modal-overlay">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">

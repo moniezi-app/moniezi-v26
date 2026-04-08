@@ -1,0 +1,25 @@
+MONIEZI v26.0.6 Package Manifest
+
+Date: 2026-04-08
+Base source package: moniezi-v26.0.5_ledger-footer-plus-context-fix_source-only.zip
+
+Changes in this package:
+- Converted footer center control from add-style plus button into Ledger-only navigation.
+- Removed footer-center create behavior to eliminate confusion between navigation and add actions.
+- Added a dedicated Home page add button at the top-right of the Home screen.
+- Added a Quick Add chooser on Home with explicit actions for:
+  - Add Income
+  - Add Expense
+  - New Invoice
+  - New Estimate
+  - Mileage
+  - Add Client
+- Preserved contextual top-right add buttons on Ledger / Income / Expenses / Invoices / Estimates.
+- Eliminated the Estimates -> Ledger detour caused by the old footer center behavior.
+- Bumped app version to 26.0.6.
+- Bumped service worker cache version for clean refresh.
+
+Build verification:
+- npm ci: completed
+- npm run build: completed successfully
+- Existing CSS minify warning still appears during build, but production build succeeds.
